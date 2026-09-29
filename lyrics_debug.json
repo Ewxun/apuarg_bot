@@ -1,0 +1,314 @@
+{
+    "sourceName": "youtube",
+    "provider": "LyricFind",
+    "text": "\u266a\nFace to face with time again (again)\nWe walk once more to the end (the end)\nBurn it down, burn it down\nWaves can't put out my flame (flame)\nDeath will never write my name (my name)\nBurn it down, burn it down\nThey say the memory of me is fading\nI've heard it all before\nDon't tell me everyone around is waiting\nAnd they all say\n\"Tear it down, burn it down\"\nAnd they'll all pay\nWhen I tear it down, burn it down\nWhen the world falls through\nAnd all is ash again\nWhile you all pretend\nIf this is the end, I'll do it again\nVoices rise in my head\nThe hands that pull at my thread\nLet them drown, burn it down\nWait for wash in the tide\nIn the abyss is where I will hide\nLet them drown, burn it down\nThey say the memory of me is fading\nI've heard it all before\nDon't tell me everyone around is waiting\nAnd they all say\n\"Tear it down, burn it down\"\nAnd they'll all pay\nWhen I tear it down, burn it down\nWhen the world falls through\nAnd all is ash again\nWhile you all pretend\nIf this is the end, I'll do it again\nWe swim against the current's aim\nIn dark, we change as smoke returns to rain\nNavigating sunken depths and all of its debris\nAnd no more hands upon my words, they only speak for me\nFor all the ones who try to silence thunder\nI'm the wave that pulls you down and under\nEvery day, I'll stand with me, and I'll fight the drought of shallow sea\nAs ships sail winds of jealousy, I'll listen carefully (let it all burn down)\nAs they all say\n\"Tear it down, burn it down\" (burn it down)\nAnd they'll all pay (and they all say)\nWhen I tear it down, burn it down (down)\nWhen the world falls through (falls through)\nAnd all is ash again\nWhile you all pretend (ah)\nIf this is the end, I'll do it again",
+    "lines": [
+        {
+            "timestamp": 0,
+            "duration": 9960,
+            "line": "\u266a",
+            "plugin": {}
+        },
+        {
+            "timestamp": 9960,
+            "duration": 4260,
+            "line": "Face to face with time again (again)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 14220,
+            "duration": 3480,
+            "line": "We walk once more to the end (the end)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 17700,
+            "duration": 4980,
+            "line": "Burn it down, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 22680,
+            "duration": 4240,
+            "line": "Waves can't put out my flame (flame)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 26920,
+            "duration": 3420,
+            "line": "Death will never write my name (my name)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 30340,
+            "duration": 5430,
+            "line": "Burn it down, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 35770,
+            "duration": 6360,
+            "line": "They say the memory of me is fading",
+            "plugin": {}
+        },
+        {
+            "timestamp": 42130,
+            "duration": 1740,
+            "line": "I've heard it all before",
+            "plugin": {}
+        },
+        {
+            "timestamp": 43870,
+            "duration": 9080,
+            "line": "Don't tell me everyone around is waiting",
+            "plugin": {}
+        },
+        {
+            "timestamp": 52950,
+            "duration": 4190,
+            "line": "And they all say",
+            "plugin": {}
+        },
+        {
+            "timestamp": 57140,
+            "duration": 4310,
+            "line": "\"Tear it down, burn it down\"",
+            "plugin": {}
+        },
+        {
+            "timestamp": 61450,
+            "duration": 3290,
+            "line": "And they'll all pay",
+            "plugin": {}
+        },
+        {
+            "timestamp": 64740,
+            "duration": 5580,
+            "line": "When I tear it down, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 70320,
+            "duration": 4110,
+            "line": "When the world falls through",
+            "plugin": {}
+        },
+        {
+            "timestamp": 74430,
+            "duration": 4160,
+            "line": "And all is ash again",
+            "plugin": {}
+        },
+        {
+            "timestamp": 78590,
+            "duration": 4000,
+            "line": "While you all pretend",
+            "plugin": {}
+        },
+        {
+            "timestamp": 82590,
+            "duration": 8830,
+            "line": "If this is the end, I'll do it again",
+            "plugin": {}
+        },
+        {
+            "timestamp": 91420,
+            "duration": 4060,
+            "line": "Voices rise in my head",
+            "plugin": {}
+        },
+        {
+            "timestamp": 95480,
+            "duration": 3770,
+            "line": "The hands that pull at my thread",
+            "plugin": {}
+        },
+        {
+            "timestamp": 99250,
+            "duration": 4730,
+            "line": "Let them drown, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 103980,
+            "duration": 3690,
+            "line": "Wait for wash in the tide",
+            "plugin": {}
+        },
+        {
+            "timestamp": 107670,
+            "duration": 4030,
+            "line": "In the abyss is where I will hide",
+            "plugin": {}
+        },
+        {
+            "timestamp": 111700,
+            "duration": 5230,
+            "line": "Let them drown, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 116930,
+            "duration": 6660,
+            "line": "They say the memory of me is fading",
+            "plugin": {}
+        },
+        {
+            "timestamp": 123590,
+            "duration": 1830,
+            "line": "I've heard it all before",
+            "plugin": {}
+        },
+        {
+            "timestamp": 125420,
+            "duration": 8730,
+            "line": "Don't tell me everyone around is waiting",
+            "plugin": {}
+        },
+        {
+            "timestamp": 134150,
+            "duration": 4290,
+            "line": "And they all say",
+            "plugin": {}
+        },
+        {
+            "timestamp": 138440,
+            "duration": 4330,
+            "line": "\"Tear it down, burn it down\"",
+            "plugin": {}
+        },
+        {
+            "timestamp": 142770,
+            "duration": 3700,
+            "line": "And they'll all pay",
+            "plugin": {}
+        },
+        {
+            "timestamp": 146470,
+            "duration": 5040,
+            "line": "When I tear it down, burn it down",
+            "plugin": {}
+        },
+        {
+            "timestamp": 151510,
+            "duration": 4360,
+            "line": "When the world falls through",
+            "plugin": {}
+        },
+        {
+            "timestamp": 155870,
+            "duration": 3910,
+            "line": "And all is ash again",
+            "plugin": {}
+        },
+        {
+            "timestamp": 159780,
+            "duration": 4310,
+            "line": "While you all pretend",
+            "plugin": {}
+        },
+        {
+            "timestamp": 164090,
+            "duration": 6090,
+            "line": "If this is the end, I'll do it again",
+            "plugin": {}
+        },
+        {
+            "timestamp": 170180,
+            "duration": 6500,
+            "line": "We swim against the current's aim",
+            "plugin": {}
+        },
+        {
+            "timestamp": 176680,
+            "duration": 8710,
+            "line": "In dark, we change as smoke returns to rain",
+            "plugin": {}
+        },
+        {
+            "timestamp": 185390,
+            "duration": 7720,
+            "line": "Navigating sunken depths and all of its debris",
+            "plugin": {}
+        },
+        {
+            "timestamp": 193110,
+            "duration": 8610,
+            "line": "And no more hands upon my words, they only speak for me",
+            "plugin": {}
+        },
+        {
+            "timestamp": 201720,
+            "duration": 8800,
+            "line": "For all the ones who try to silence thunder",
+            "plugin": {}
+        },
+        {
+            "timestamp": 210520,
+            "duration": 8480,
+            "line": "I'm the wave that pulls you down and under",
+            "plugin": {}
+        },
+        {
+            "timestamp": 219000,
+            "duration": 7810,
+            "line": "Every day, I'll stand with me, and I'll fight the drought of shallow sea",
+            "plugin": {}
+        },
+        {
+            "timestamp": 226810,
+            "duration": 12050,
+            "line": "As ships sail winds of jealousy, I'll listen carefully (let it all burn down)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 238860,
+            "duration": 4140,
+            "line": "As they all say",
+            "plugin": {}
+        },
+        {
+            "timestamp": 243000,
+            "duration": 3970,
+            "line": "\"Tear it down, burn it down\" (burn it down)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 246970,
+            "duration": 3880,
+            "line": "And they'll all pay (and they all say)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 250850,
+            "duration": 4960,
+            "line": "When I tear it down, burn it down (down)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 255810,
+            "duration": 4410,
+            "line": "When the world falls through (falls through)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 260220,
+            "duration": 3970,
+            "line": "And all is ash again",
+            "plugin": {}
+        },
+        {
+            "timestamp": 264190,
+            "duration": 4180,
+            "line": "While you all pretend (ah)",
+            "plugin": {}
+        },
+        {
+            "timestamp": 268370,
+            "duration": 6160,
+            "line": "If this is the end, I'll do it again",
+            "plugin": {}
+        }
+    ],
+    "plugin": {}
+}
