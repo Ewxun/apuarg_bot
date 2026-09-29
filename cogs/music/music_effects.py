@@ -57,9 +57,12 @@ class MusicEffectsv2(app_commands.Group):
 
         await inter.response.send_message(embed=discord.Embed(description="Reset all effects to default", color=0xca5cdd))
 
+    '''
     @app_commands.command(name='custom', description='Set your own effects on certain aspects of the player')
     async def custom_filter(self, inter: discord.Interaction, filter:Literal['Band Filter', 'Low Pass', 'Rotation', 'Timescale', 'Tremolo', 'Vibrato', 'Distortion']):
         await inter.response.send_message('Soon')
+    '''
+    
 
 
 async def setup(bot):

@@ -298,7 +298,15 @@ class Music(commands.Cog):
             track: wavelink.Playable = tracks[0]   # search query returns a list of tracks, so we take the first one
             
             await player.queue.put_wait(track)
-            await inter.followup.send(embed=discord.Embed(description=f"Added **`{track}`** by **{track.author}** to the queue.", color=0xca5cdd))
+            add_queue_embed = discord.Embed(description=f"Added **`{track}`** by **{track.author}** to the queue.", color=0xca5cdd)
+
+            if track.artwork:
+                add_queue_embed.set_thumbnail(url=track.artwork)
+
+            add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
+            
+            add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
+            await inter.followup.send(embed=add_queue_embed)
 
         if not player.playing:
             # Play now since we aren't playing anything...
