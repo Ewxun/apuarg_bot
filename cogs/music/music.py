@@ -328,19 +328,19 @@ class Music(commands.Cog):
                 add_toolbar = None  # No need for toolbar buttons since the track will play immediately
             elif player.queue.is_empty and player.current:
                 # The track will play after the current track finishes
-                track = player.current
-                track_started = track.extras.start_at
+                playing_track = player.current
+                track_started = playing_track.extras.start_at
                 track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
-                remaining_time = colon_time(track.length - track_played)
+                remaining_time = colon_time(playing_track.length - track_played)
                 estimated_time = f"`{remaining_time}` (Next)"
             else:
                 # The track will play after all other tracks in the queue finish
                 estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
 
-                track = player.current
-                track_started = track.extras.start_at
+                playing_track = player.current
+                track_started = playing_track.extras.start_at
                 track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
-                current_remaining_time = colon_time(track.length - track_played)
+                current_remaining_time = colon_time(playing_track.length - track_played)
 
                 estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
