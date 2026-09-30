@@ -316,9 +316,6 @@ class Music(commands.Cog):
             if track.artwork:
                 add_queue_embed.set_thumbnail(url=track.artwork)
 
-            add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
-            add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
-
             # Add toolbar buttons to the embed
             add_toolbar = QueueTrackView(player, track)
             # Calculate the estimated time until the track plays
@@ -340,19 +337,22 @@ class Music(commands.Cog):
                 playing_track = player.current
                 track_started = playing_track.extras.start_at
                 track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
-                current_remaining_time = colon_time(playing_track.length - track_played)
+                current_remaining_time = playing_track.length - track_played
 
                 estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
+            await player.queue.put_wait(track)
+            add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
+            add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
             add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
-            
+
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
+
             if add_toolbar:
                 await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
             else:
                 await inter.followup.send(embed=add_queue_embed)
 
-            await player.queue.put_wait(track)
         if not player.playing:
             # Play now since we aren't playing anything...
             await player.play(player.queue.get(), volume=player.volume)
