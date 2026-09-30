@@ -13,7 +13,7 @@ from .music_debug import MusicDebug
 from .music_effects import MusicEffectsv2
 
 
-RELATIVE_VOLUME = 50
+RELATIVE_VOLUME = 70
 LOCK_USER_DEFAULT = None  # Set to None to allow public control of the player by default, or set to True to lock the player to inter.user by default.
 
 async def is_url_on(url, retries=3):
@@ -304,6 +304,11 @@ class Music(commands.Cog):
                 add_queue_embed.set_thumbnail(url=track.artwork)
 
             add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
+            add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
+
+            # Calculate the estimated time until the track plays
+            estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
+            add_queue_embed.add_field(name="Estimated time until play", value=f"`{colon_time(estimated_time)}`", inline=True)
             
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
             await inter.followup.send(embed=add_queue_embed)
