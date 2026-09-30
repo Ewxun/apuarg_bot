@@ -332,7 +332,7 @@ class Music(commands.Cog):
                 estimated_time = f"`{remaining_time}` (Next)"
             else:
                 # The track will play after all other tracks in the queue finish
-                estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
+                estimated_time = sum(t.length for t in player.queue)
 
                 playing_track = player.current
                 track_started = playing_track.extras.start_at
