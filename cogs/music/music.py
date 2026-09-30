@@ -347,7 +347,10 @@ class Music(commands.Cog):
             add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
             
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
-            await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
+            if add_toolbar:
+                await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
+            else:
+                await inter.followup.send(embed=add_queue_embed)
 
         await player.queue.put_wait(track)
         if not player.playing:
