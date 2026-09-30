@@ -31,7 +31,7 @@ async def is_url_on(url, retries=3):
 def truncate_str(s: str, length: int=70):
     return (s[:length] + '...') if len(s) > length else s
 
-def text_splitter(self, text, split_length):
+def text_splitter(text, split_length):
     num_of_fields = len(text)//split_length + 1
     splitlist = []
     for i in range(num_of_fields):
@@ -62,6 +62,18 @@ def colon_time(millis:int) -> str:
         return "%02d:%02d:%02d" % (hours, minutes, seconds)
     else:
         return "%02d:%02d" % (minutes, seconds)
+
+class QueueTrackView(discord.ui.View):
+    def __init__(self, player, track):
+        super().__init__(timeout=None)
+        self.player = player
+        self.track = track
+
+    @discord.ui.button(label="Remove", custom_id="queue_toolbar:remove_song", style=discord.ButtonStyle.red, row=0)
+    async def toolbar_remove(self, inter, button):
+        await self.player.queue.remove(self.track)
+        await inter.response.send_message(embed=discord.Embed(description=f'Removed **{self.track.title}** by {self.track.author} from the queue.', color=0xff2167))
+        
 
 class Music(commands.Cog):
     music_group = app_commands.Group(name='music', description='Music commands')
@@ -306,10 +318,13 @@ class Music(commands.Cog):
             add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
             add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
 
+            # Add toolbar buttons to the embed
+            add_toolbar = QueueTrackView(player, track)
             # Calculate the estimated time until the track plays
             if player.queue.is_empty and not player.playing:
                 # The track will play immediately since the queue is empty and nothing is playing
                 estimated_time = "Now"
+                add_toolbar = None  # No need for toolbar buttons since the track will play immediately
             elif player.queue.is_empty and player.playing:
                 # The track will play after the current track finishes
                 track = player.current
@@ -325,7 +340,7 @@ class Music(commands.Cog):
             add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
             
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
-            await inter.followup.send(embed=add_queue_embed)
+            await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
 
         if not player.playing:
             # Play now since we aren't playing anything...
@@ -345,7 +360,10 @@ class Music(commands.Cog):
             return await inter.response.send_message(embed=discord.Embed(description="Lyrics currently disabled", color=0xff0000))
 
         session_id = node.session_id
-        lyrics_data = await node.send("GET", path=f"v4/sessions/{session_id}/players/{inter.guild.id}/track/lyrics?skipTrackSource=false")
+        try:
+            lyrics_data = await node.send("GET", path=f"v4/sessions/{session_id}/players/{inter.guild.id}/track/lyrics?skipTrackSource=false")
+        except wavelink.exceptions.LavalinkException as e:
+            return await inter.edit_original_response(embed=discord.Embed(description=f"Error fetching lyrics or no lyrics available.", color=0xff0000))
 
         if lyrics_data["text"] and len(lyrics_data["text"]) > 2:
             lyrics_text = lyrics_data["text"]
@@ -504,6 +522,7 @@ class Music(commands.Cog):
 
     @queue_group.command(name='view', description="View the current queue.")
     async def view_queue(self, inter):
+        # TODO: Add pagination for queues with more than 15 songs
         player: wavelink.Player = inter.guild.voice_client
 
         queue = player.queue
