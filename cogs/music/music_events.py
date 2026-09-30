@@ -123,7 +123,7 @@ class MusicEvents(commands.Cog):
         track: wavelink.Playable = payload.track
         track.extras.start_at = int(time.time())
         original.extras.start_at = int(time.time())
-        print(f"[Music] Track started: {track.title} by {track.author} | Encoded: {track.encoded}")
+        #print(f"[Music] Track started: {track.title} by {track.author} | Encoded: {track.encoded}")
 
         embed: discord.Embed = discord.Embed(title="Now Playing", color=random.randint(0, 0xffffff))
         embed.description = f"**{track.title}** by **{track.author}**\n{track_load_bar(track)}"

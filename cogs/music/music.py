@@ -307,8 +307,22 @@ class Music(commands.Cog):
             add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
 
             # Calculate the estimated time until the track plays
-            estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
-            add_queue_embed.add_field(name="Estimated time until play", value=f"`{colon_time(estimated_time)}`", inline=True)
+            if player.queue.is_empty and not player.playing:
+                # The track will play immediately since the queue is empty and nothing is playing
+                estimated_time = "Now"
+            elif player.queue.is_empty and player.playing:
+                # The track will play after the current track finishes
+                track = player.current
+                track_started = track.extras.start_at
+                track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
+                remaining_time = colon_time(track.length - track_played)
+                estimated_time = f"`{remaining_time}` (Next)"
+            else:
+                # The track will play after all other tracks in the queue finish
+                estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
+                estimated_time = f"`{colon_time(estimated_time)}`"
+
+            add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
             
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
             await inter.followup.send(embed=add_queue_embed)
@@ -523,6 +537,23 @@ class Music(commands.Cog):
                 break
 
         await inter.response.send_message(embed=embed)
+
+    @queue_group.command(name='remove', description="Remove a song from the queue.")
+    async def q_remove(self, inter, pos:int):
+        player: wavelink.Player = inter.guild.voice_client
+
+        queue = player.queue
+        if len(queue) == 0:
+            return await inter.response.send_message(embed=discord.Embed(description="The queue is empty.", color=0xff0000))
+
+        if pos > len(queue):
+            return await inter.response.send_message(embed=discord.Embed(description="Invalid position.", color=0xff0000))
+
+        removed_song = queue[pos-1]
+        queue.remove(removed_song)
+        rem_embed = discord.Embed(description=f"Removed **{removed_song.title}** by {removed_song.author} from the queue. (Position: {pos})", color=0xff2167)
+        rem_embed.set_thumbnail(url=removed_song.artwork)
+        await inter.response.send_message(embed=rem_embed)
 
     @queue_group.command(name='swap', description="Change positions of 2 songs in the queue.")
     async def q_swap(self, inter, pos1:int, pos2:int):
