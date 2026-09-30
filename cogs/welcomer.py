@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+SEPERATOR_ROLE_IDS = [1544700530071175278, 1544700725227954187, 1544701466256613541]
 
 class Welcomer_Cog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -16,11 +17,18 @@ class Welcomer_Cog(commands.Cog):
     async def welcome_listener(self, member: discord.Member):
         welcome_channel = self.bot.get_channel(self.welcome_channel_id)
         if welcome_channel and welcome_channel.guild == member.guild:
-            embed = discord.Embed(title="Welcome!", description=f"Welcome to the server, {member.mention}!", color=0x00FF00)
+            embed = discord.Embed(title="Welcome!", description=f"Welcome to the server, {member.mention}!\n\nPlease read the rules and verify yourself in <#1479892302519468072>.", color=0x00FF00)
             asset_filename = "assets/salt_l2d_nobg.gif"
             dc_file = discord.File(asset_filename, filename="salt_welcome.gif")
             embed.set_image(url="attachment://salt_welcome.gif")
+            embed.set_footer(text="Thank you for joining!", icon_url=member.display_avatar.url)
             await welcome_channel.send(embed=embed, file=dc_file)
+
+            # Add separator roles to the new member
+            for role_id in SEPERATOR_ROLE_IDS:
+                role = member.guild.get_role(role_id)
+                if role:
+                    await member.add_roles(role, reason="Add separator roles on join")
 
     @commands.Cog.listener(name="on_member_remove")
     async def farewell_listener(self, member: discord.Member):

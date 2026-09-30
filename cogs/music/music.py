@@ -8,6 +8,7 @@ from discord import app_commands
 
 import aiohttp
 import wavelink
+from wavelink import player
 
 from .music_debug import MusicDebug
 from .music_effects import MusicEffectsv2
@@ -71,7 +72,7 @@ class QueueTrackView(discord.ui.View):
 
     @discord.ui.button(label="Remove", custom_id="queue_toolbar:remove_song", style=discord.ButtonStyle.red, row=0)
     async def toolbar_remove(self, inter, button):
-        await self.player.queue.remove(self.track)
+        self.player.queue.remove(self.track)
         await inter.response.send_message(embed=discord.Embed(description=f'Removed **{self.track.title}** by {self.track.author} from the queue.', color=0xff2167))
         
 
@@ -309,7 +310,7 @@ class Music(commands.Cog):
         else:
             track: wavelink.Playable = tracks[0]   # search query returns a list of tracks, so we take the first one
             
-            await player.queue.put_wait(track)
+            
             add_queue_embed = discord.Embed(description=f"Added **`{track}`** by **{track.author}** to the queue.", color=0xca5cdd)
 
             if track.artwork:
@@ -321,11 +322,11 @@ class Music(commands.Cog):
             # Add toolbar buttons to the embed
             add_toolbar = QueueTrackView(player, track)
             # Calculate the estimated time until the track plays
-            if player.queue.is_empty and not player.playing:
+            if player.queue.is_empty and not player.current:
                 # The track will play immediately since the queue is empty and nothing is playing
                 estimated_time = "Now"
                 add_toolbar = None  # No need for toolbar buttons since the track will play immediately
-            elif player.queue.is_empty and player.playing:
+            elif player.queue.is_empty and player.current:
                 # The track will play after the current track finishes
                 track = player.current
                 track_started = track.extras.start_at
@@ -335,13 +336,20 @@ class Music(commands.Cog):
             else:
                 # The track will play after all other tracks in the queue finish
                 estimated_time = sum(t.length for t in player.queue[:-1])  # Sum lengths of all tracks before the last one
-                estimated_time = f"`{colon_time(estimated_time)}`"
+
+                track = player.current
+                track_started = track.extras.start_at
+                track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
+                current_remaining_time = colon_time(track.length - track_played)
+
+                estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
             add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
             
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
             await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
 
+        await player.queue.put_wait(track)
         if not player.playing:
             # Play now since we aren't playing anything...
             await player.play(player.queue.get(), volume=player.volume)
