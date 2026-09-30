@@ -352,7 +352,7 @@ class Music(commands.Cog):
             else:
                 await inter.followup.send(embed=add_queue_embed)
 
-        await player.queue.put_wait(track)
+            await player.queue.put_wait(track)
         if not player.playing:
             # Play now since we aren't playing anything...
             await player.play(player.queue.get(), volume=player.volume)
