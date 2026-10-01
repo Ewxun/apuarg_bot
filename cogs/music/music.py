@@ -240,6 +240,7 @@ class Music(commands.Cog):
                     await self.bot.connected_lava_nodes[node_id].close(eject=True)
             
                 self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+                player = await inter.user.voice.channel.connect(cls=wavelink.Player)
 
             await player.set_volume(self.relative_volume)
             player.autoplay = wavelink.AutoPlayMode.partial
@@ -282,6 +283,7 @@ class Music(commands.Cog):
                         await self.bot.connected_lava_nodes[node_id].close(eject=True)
 
                     self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+                    player = await inter.user.voice.channel.connect(cls=wavelink.Player)
 
 
                 await player.set_volume(self.relative_volume)
