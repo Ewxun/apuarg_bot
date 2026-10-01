@@ -93,15 +93,17 @@ class Music(commands.Cog):
         self.bot.tree.add_command(self.play_spotify)
         
     async def cog_load(self):
-        if self.bot.config.get_value('lavalink_nodes.fallback.host') != None or self.bot.config.get_value('lavalink_nodes.fallback.host') != "":
-            if await is_url_on(self.bot.config.get_value('lavalink_nodes.fallback.host')):
-                self.backup_node = wavelink.Node(uri=self.bot.config.get_value('lavalink_nodes.fallback.host'), password=self.bot.config.get_value('lavalink_nodes.fallback.password'))
-        
-        if await is_url_on(self.bot.config.get_value('lavalink_nodes.main.host')):
-            self.main_node = wavelink.Node(uri=self.bot.config.get_value('lavalink_nodes.main.host'), password=self.bot.config.get_value('lavalink_nodes.main.password'))
+        node_list = self.bot.config.get_value('lavalink_nodes')
+        main_node_info = node_list[0] if len(node_list) > 0 else None
+
+        if not main_node_info:
+            print("[Music] No Lavalink nodes configured. Please check your config.yml file.")
+            return
+
+        if await is_url_on(main_node_info[0]):
+            self.main_node = wavelink.Node(uri=main_node_info[0], password=main_node_info[1])
             self.use_node = self.main_node
-        elif self.backup_node:
-            self.use_node = self.backup_node
+
         
         # cache_capacity is EXPERIMENTAL. Turn it off by passing None
         self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
@@ -268,7 +270,7 @@ class Music(commands.Cog):
         
         player: wavelink.Player
         player = inter.guild.voice_client
-        await inter.response.defer(thinking=True)
+        await inter.response.send_message(embed=discord.Embed(description=f"Searching for track...", color=0xca5cdd))
 
         if not player:
             try:
@@ -326,6 +328,14 @@ class Music(commands.Cog):
 
         try:
             tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source])
+        except wavelink.exceptions.NodeException as e:
+            if e.__context__ and "422" in str(e.__context__):
+                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is invalid or restricted.", color=0xff0000))
+            elif e.__context__ and "502" in str(e.__context__):
+                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - Y-you're going too fast!!! Slow down and try again later.", color=0xff0000))
+            else:
+                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - An invalid search query/URL was provided.", color=0xff0000))
+            return
         except wavelink.exceptions.LavalinkLoadException as e:
             if "https://" in query or "http://" in query:
                 await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is restricted or is unavailable.", color=0xff0000))

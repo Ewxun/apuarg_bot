@@ -154,6 +154,30 @@ class MusicEvents(commands.Cog):
                 original.extras.lyrics = text_splitter(lresps['lyrics'], 4000) if lresps != {} else None
             await rses.close()
         '''
+
+    @commands.Cog.listener(name="on_wavelink_track_exception")
+    async def track_exception(self, payload: wavelink.TrackExceptionEventPayload):
+        player: wavelink.Player | None = payload.player
+        if not player:
+            print("EDGE CASE")
+            # Handle edge cases...
+            return
+        
+        track: wavelink.Playable = payload.track
+
+        await player.home.send(embed=discord.Embed(description=f"An error occurred while playing the track: {track.title}\nError: `{payload.exception}`", color=0xff0000))
+
+    @commands.Cog.listener(name="on_wavelink_track_end")
+    async def track_end(self, payload: wavelink.TrackEndEventPayload):
+        player: wavelink.Player | None = payload.player
+        if not player:
+            print("EDGE CASE")
+            # Handle edge cases...
+            return
+        
+        if len(player.queue) == 0:
+            await player.home.send(embed=discord.Embed(description="Queue is empty...", color=0x0000ff))
+            return
         
 
 
