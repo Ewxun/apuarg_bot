@@ -229,7 +229,18 @@ class Music(commands.Cog):
             except:
                 return await inter.response.send_message(embed=discord.Embed(description='You are not in a voice channel.', color=0xff0000))
         try:
-            player = await channel.connect(cls=wavelink.Player)
+            # Attempt to solve bot instantly disconnecting from VC causing timeout
+            # Reloading the cog will fix this, so reconnecting to the Node might fix it?
+            try:  
+                player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+            except wavelink.exceptions.ChannelTimeoutException:
+                await inter.followup.send(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
+            
+                for node_id in self.bot.connected_lava_nodes:
+                    await self.bot.connected_lava_nodes[node_id].close(eject=True)
+            
+                self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+
             await player.set_volume(self.relative_volume)
             player.autoplay = wavelink.AutoPlayMode.partial
             player.init_user = inter.user.id
@@ -248,7 +259,7 @@ class Music(commands.Cog):
         await inter.response.send_message(embed=discord.Embed(description=f'Bot connected to {channel.mention}', color=0xca5cdd))
         
     @music_group.command(name="play")
-    @app_commands.describe(query="Provide a query to search for a song. Also accepts URLs.", source="Select the source to search from. Defaults to YouTube Music. Ignore this if you are providing a URL.")
+    @app_commands.describe(query="Provide a query to search for a song. Also accepts URLs. Defaults to YouTube Music.", source="Select the source to search from. Defaults to YouTube Music. Ignore this if you are providing a URL.")
     async def play_cmd(self, inter, query: str, source:Literal["YouTube", "YouTubeMusic", "SoundCloud", "Spotify", "Deezer"]='YouTubeMusic') -> None:
         """Play a song with the given query."""
         if not inter.guild:
@@ -260,7 +271,19 @@ class Music(commands.Cog):
 
         if not player:
             try:
-                player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+                # Attempt to solve bot instantly disconnecting from VC causing timeout
+                # Reloading the cog will fix this, so reconnecting to the Node might fix it?
+                try:  
+                    player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+                except wavelink.exceptions.ChannelTimeoutException:
+                    await inter.followup.send(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
+
+                    for node_id in self.bot.connected_lava_nodes:
+                        await self.bot.connected_lava_nodes[node_id].close(eject=True)
+
+                    self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+
+
                 await player.set_volume(self.relative_volume)
                 player.autoplay = wavelink.AutoPlayMode.partial
                 player.init_user = inter.user.id

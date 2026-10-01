@@ -8,26 +8,9 @@ from discord.ext import commands
 from ext import config
 
 
-
 token = config.get_value('bot.token')
 bot_owners = config.get_value('bot.bot_owners')
 sync_guilds = config.get_value('bot.presync_guilds')
-
-class MyClient(commands.Bot):
-    def __init__(self, *, intents: discord.Intents):
-        super().__init__(
-          command_prefix = "!-=",
-          case_insensitive=True,
-          strip_after_prefix=True,
-          owner_ids=list(set(bot_owners)),
-          intents=intents
-        )
-
-
-bot = MyClient(intents=discord.Intents().all())
-bot.config = config
-
-slash_gids = sync_guilds
 
 async def loadcogs():
     print("[Cogs] Loading all cogs...")
@@ -54,7 +37,6 @@ async def loadcogs():
                         print(f'[Cogs] Unable to load {filename}.{dir_file[:-3]}:\n[Cogs] {"".join(err_tb)}')
     print("[Cogs] All Cogs Loaded!")
 
-
 async def sync_slashes(guild_ids):
     for g_id in guild_ids:
         snowf_obj = discord.Object(id=g_id)
@@ -63,12 +45,31 @@ async def sync_slashes(guild_ids):
         print(f"[Slash CMD] Synced Commands - {g_id}")
     print("[Slash CMD] All commands synced")
 
+
+class MyClient(commands.Bot):
+    def __init__(self, *, intents: discord.Intents):
+        super().__init__(
+          command_prefix = "!-=",
+          case_insensitive=True,
+          strip_after_prefix=True,
+          owner_ids=list(set(bot_owners)),
+          intents=intents
+        )
+
+    async def setup_hook(self):
+        await loadcogs()
+        await sync_slashes(sync_guilds)
+
+
+bot = MyClient(intents=discord.Intents().all())
+bot.config = config
+
+
 #------------------------
 @bot.event
 async def on_ready():
     print(f"[Client] Bot connected successfully as {str(bot.user)}")
-    await loadcogs()
-    await sync_slashes(slash_gids)   
+       
     activity = discord.Activity(type=discord.ActivityType.listening, name="Echoes of Memoria - Lucidin")
     await bot.change_presence(activity=activity)
 
