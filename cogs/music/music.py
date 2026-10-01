@@ -323,8 +323,16 @@ class Music(commands.Cog):
             query = "spsearch:" + query
         elif source == "Deezer":
             query = "dzsearch:" + query
+
+        try:
+            tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source])
+        except wavelink.exceptions.LavalinkLoadException as e:
+            if "https://" in query or "http://" in query:
+                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is restricted or is unavailable.", color=0xff0000))
+            else:
+                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - An error occurred while searching for the track: {e}", color=0xff0000))
+            return
         
-        tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source])
         if not tracks:
             await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - Could not find any tracks with that query. Please try again.", color=0xff0000))
             return
