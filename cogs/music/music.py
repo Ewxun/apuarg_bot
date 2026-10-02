@@ -8,7 +8,6 @@ from discord import app_commands
 
 import aiohttp
 import wavelink
-from wavelink import player
 
 from .music_debug import MusicDebug
 from .music_effects import MusicEffectsv2
@@ -39,20 +38,24 @@ def text_splitter(text, split_length):
         splitlist.append(text[i*split_length:i+1*split_length])
     return splitlist
 
-def track_load_bar(track, length=20):
+def track_load_bar(player, track, length=20):
     loaded = '='
     unloaded = '-'
-    
-    track_started = track.extras.start_at
-    track_played = int(time.time()) - track_started
-    #print(track_played)
-    played_percent = (track_played/int(track.length/1000)) * 100
+
+    if player.position == 0:
+        # Falback if player.position is not available
+        track_started = player.current_start
+        track_played = (int(time.time()) - track_started) * 1000  # To milliseconds
+    else:
+        track_played = player.position
+
+    played_percent = (track_played/track.length) * 100
     
     percent = max(0, min(100, played_percent))
     filled_length = int(length * percent // 100)
-    #print(track_played, played_percent, percent, filled_length)
+    
     bar = loaded * (filled_length - 1) + 'O' + unloaded * (length - filled_length)
-    text = colon_time(track_played*1000) + '`{' + bar + '}`' + colon_time(track.length)
+    text = colon_time(track_played) + '`{' + bar + '}`' + colon_time(track.length)
     return text
 
 def colon_time(millis:int) -> str:
@@ -231,7 +234,8 @@ class Music(commands.Cog):
             except:
                 return await inter.response.send_message(embed=discord.Embed(description='You are not in a voice channel.', color=0xff0000))
 
-        await inter.response.send(embed=discord.Embed(description=f"Connecting to {channel.mention}...", color=0xca5cdd))
+        await inter.response.send_message(embed=discord.Embed(description=f"Connecting to {channel.mention}...", color=0xca5cdd))
+
         try:
             # Attempt to solve bot instantly disconnecting from VC causing timeout
             # Reloading the cog will fix this, so reconnecting to the Node might fix it?
@@ -384,19 +388,29 @@ class Music(commands.Cog):
             elif player.queue.is_empty and player.current:
                 # The track will play after the current track finishes
                 playing_track = player.current
-                track_started = playing_track.extras.start_at
-                track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
+
+                if player.position == 0:
+                    # Falback if player.position is not available
+                    track_started = player.current_start
+                    track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
+                else:
+                    track_played = player.position
+
                 remaining_time = colon_time(playing_track.length - track_played)
                 estimated_time = f"`{remaining_time}` (Next)"
             else:
                 # The track will play after all other tracks in the queue finish
                 estimated_time = sum(t.length for t in player.queue)
-
                 playing_track = player.current
-                track_started = playing_track.extras.start_at
-                track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
-                current_remaining_time = playing_track.length - track_played
 
+                if player.position == 0:
+                    # Falback if player.position is not available
+                    track_started = player.current_start
+                    track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
+                else:
+                    track_played = player.position
+
+                current_remaining_time = playing_track.length - track_played
                 estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
             await player.queue.put_wait(track)
@@ -411,7 +425,7 @@ class Music(commands.Cog):
             else:
                 await inter.edit_original_response(embed=add_queue_embed)
 
-        if not player.playing:
+        if not player.current:
             # Play now since we aren't playing anything...
             await player.play(player.queue.get(), volume=player.volume)
 
@@ -517,7 +531,7 @@ class Music(commands.Cog):
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
         # Make it look like now_playing has progressed the seeked seconds
-        player.current.extras.start_at = player.current.extras.start_at - seconds
+        player.current_start = player.current_start - seconds
         
         num = seconds*1000
         await player.seek(int(player.position + num))
@@ -533,7 +547,7 @@ class Music(commands.Cog):
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
         # Make it look like now_playing has deducted the rewinded seconds
-        player.current.extras.start_at = player.current.extras.start_at + seconds
+        player.current_start = player.current_start + seconds
         
         num = seconds*1000
         await player.seek(int(player.position - num))
@@ -554,7 +568,9 @@ class Music(commands.Cog):
         if not player.current:
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
-        embed = discord.Embed(title="Now Playing", description=f"**{player.current.title}** by **{player.current.author}** \n{track_load_bar(player.current)}")
+        print(f"Now Playing: {player.current.title} by {player.current.author} | Position: {player.position}ms | Length: {player.current.length}ms")
+
+        embed = discord.Embed(title="Now Playing", description=f"**{player.current.title}** by **{player.current.author}** \n{track_load_bar(player, player.current)}")
         if player.current.artwork:
             embed.set_thumbnail(url=player.current.artwork)
 

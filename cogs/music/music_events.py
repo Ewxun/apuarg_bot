@@ -15,11 +15,11 @@ def colon_time(millis:int) -> str:
     else:
         return "%02d:%02d" % (minutes, seconds)
     
-def track_load_bar(track, length=20):
+def track_load_bar(player, track, length=20):
     loaded = '='
     unloaded = '-'
     
-    track_started = track.extras.start_at
+    track_started = player.current_start
     track_played = int(time.time()) - track_started
     played_percent = (track_played/int(track.length/1000)) * 100
     
@@ -44,19 +44,19 @@ class PlayerToolbarView(discord.ui.View):
     @discord.ui.button(emoji="⏯️", custom_id="player_toolbar:playpause", style=discord.ButtonStyle.gray, row=0)
     async def toolbar_playpause(self, inter, button):
         await self.player.pause(not self.player.paused)
-        await inter.response.send_message(embed=discord.Embed(description="Paused the player." if self.player.paused else "Resumed the player.", color=0xca5cdd))
+        await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Paused the player." if self.player.paused else "Resumed the player.", color=0xca5cdd))
         
     @discord.ui.button(emoji="⏭️", custom_id="player_toolbar:next", style=discord.ButtonStyle.gray, row=0)
     async def toolbar_next(self, inter, button):
         await self.player.skip(force=True)
-        await inter.response.send_message(embed=discord.Embed(description='Skipped the current song.', color=0xca5cdd))
+        await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Skipped the current song.", color=0xca5cdd))
         
     @discord.ui.button(emoji="⏹️", custom_id="player_toolbar:stop", style=discord.ButtonStyle.red, row=0)
     async def toolbar_stop(self, inter, button):
         self.player.autoplay = wavelink.AutoPlayMode.disabled  # Remember to disable autoplay when stopping the player if not I'll keep playing a new recommended song after the queue is cleared
         self.player.queue.clear()
         await self.player.skip(force=True)
-        return await inter.response.send_message(embed=discord.Embed(description='Stopped the player', color=0xca5cff))
+        return await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Stopped the player", color=0xca5cff))
     
     @discord.ui.button(emoji="🔁", custom_id="player_toolbar:loop", style=discord.ButtonStyle.gray, row=0)
     async def toolbar_loop(self, inter, button):
@@ -68,9 +68,9 @@ class PlayerToolbarView(discord.ui.View):
         
         self.player.queue.mode = wavelink.QueueMode.loop if self.player.queue.mode == wavelink.QueueMode.normal else wavelink.QueueMode.normal
         if self.player.queue.mode == wavelink.QueueMode.normal:
-            await inter.response.send_message(embed=discord.Embed(description=f"Player no longer looping song.", color=0xca5cdd))
+            await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Player no longer looping song.", color=0xca5cdd))
         else:
-            await inter.response.send_message(embed=discord.Embed(description=f"Player now looping current song.", color=0xca5cdd))
+            await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Player now looping current song.", color=0xca5cdd))
 
     '''
     # Re-enable after getting a new lyrics host
@@ -120,12 +120,10 @@ class MusicEvents(commands.Cog):
 
         original: wavelink.Playable | None = payload.original
         track: wavelink.Playable = payload.track
-        track.extras.start_at = int(time.time())
-        original.extras.start_at = int(time.time())
-        #print(f"[Music] Track started: {track.title} by {track.author} | Encoded: {track.encoded}")
+        player.current_start = int(time.time())
 
         embed: discord.Embed = discord.Embed(title="Now Playing", color=random.randint(0, 0xffffff))
-        embed.description = f"**{track.title}** by **{track.author}**\n\n{track_load_bar(track)}"
+        embed.description = f"**{track.title}** by **{track.author}**\n\n{track_load_bar(player, track)}"
 
         if track.artwork:
             embed.set_thumbnail(url=track.artwork)
@@ -174,7 +172,7 @@ class MusicEvents(commands.Cog):
             return
 
         # If autoplay is enabled, we don't want to send a message about the queue being empty after every song ends
-        if len(player.queue) == 0 and player.autoplay == wavelink.AutoPlayMode.disabled:
+        if len(player.queue) == 0 and player.autoplay == wavelink.AutoPlayMode.partial and payload.reason == "finished":
             await player.home.send(embed=discord.Embed(description="Queue is empty...", color=0x0000ff))
             return
 
