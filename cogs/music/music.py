@@ -568,8 +568,6 @@ class Music(commands.Cog):
         if not player.current:
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
-        print(f"Now Playing: {player.current.title} by {player.current.author} | Position: {player.position}ms | Length: {player.current.length}ms")
-
         embed = discord.Embed(title="Now Playing", description=f"**{player.current.title}** by **{player.current.author}** \n{track_load_bar(player, player.current)}")
         if player.current.artwork:
             embed.set_thumbnail(url=player.current.artwork)
