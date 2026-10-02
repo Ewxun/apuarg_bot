@@ -230,19 +230,28 @@ class Music(commands.Cog):
                 channel = inter.user.voice.channel
             except:
                 return await inter.response.send_message(embed=discord.Embed(description='You are not in a voice channel.', color=0xff0000))
+
+        await inter.response.send(embed=discord.Embed(description=f"Connecting to {channel.mention}...", color=0xca5cdd))
         try:
             # Attempt to solve bot instantly disconnecting from VC causing timeout
             # Reloading the cog will fix this, so reconnecting to the Node might fix it?
             try:  
-                player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+                player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
             except wavelink.exceptions.ChannelTimeoutException:
-                await inter.followup.send(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
+                await inter.edit_original_response(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
             
                 for node_id in self.bot.connected_lava_nodes:
                     await self.bot.connected_lava_nodes[node_id].close(eject=True)
-            
+                
                 self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
-                player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+                
+                # Loops until NodeStatus is connected, then connects to the VC
+                first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
+                while first_node.status != wavelink.NodeStatus.CONNECTED:
+                    await asyncio.sleep(1)
+                    first_node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
+                
+                player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
 
             await player.set_volume(self.relative_volume)
             player.autoplay = wavelink.AutoPlayMode.partial
@@ -250,7 +259,7 @@ class Music(commands.Cog):
             player.control_user = inter.user.id if LOCK_USER_DEFAULT else None
             player.inactive_timeout = 150
         except discord.errors.ClientException:
-            return await inter.response.send_message(embed=discord.Embed(description="The bot is already connected to the voice channel.", color=0xff0000))
+            return await inter.edit_original_response(embed=discord.Embed(description="The bot is already connected to the voice channel.", color=0xff0000))
         
         # Lock the player to this channel...
         if not hasattr(player, "home"):
@@ -259,11 +268,11 @@ class Music(commands.Cog):
             if player.home != inter.channel:
                 player.home = inter.channel
 
-        await inter.response.send_message(embed=discord.Embed(description=f'Bot connected to {channel.mention}', color=0xca5cdd))
+        await inter.edit_original_response(embed=discord.Embed(description=f'Bot connected to {channel.mention}', color=0xca5cdd))
         
     @music_group.command(name="play")
     @app_commands.describe(query="Provide a query to search for a song. Also accepts URLs. Defaults to YouTube Music.", source="Select the source to search from. Defaults to YouTube Music. Ignore this if you are providing a URL.")
-    async def play_cmd(self, inter, query: str, source:Literal["YouTube", "YouTubeMusic", "SoundCloud", "Spotify", "Deezer"]='YouTubeMusic') -> None:
+    async def play_cmd(self, inter:discord.Interaction, query: str, source:Literal["YouTube", "YouTubeMusic", "SoundCloud", "Spotify", "Deezer"]='YouTubeMusic') -> None:
         """Play a song with the given query."""
         if not inter.guild:
             return
@@ -277,16 +286,22 @@ class Music(commands.Cog):
                 # Attempt to solve bot instantly disconnecting from VC causing timeout
                 # Reloading the cog will fix this, so reconnecting to the Node might fix it?
                 try:  
-                    player = await inter.user.voice.channel.connect(cls=wavelink.Player)
+                    player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
                 except wavelink.exceptions.ChannelTimeoutException:
-                    await inter.followup.send(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
+                    await inter.edit_original_response(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
 
                     for node_id in self.bot.connected_lava_nodes:
                         await self.bot.connected_lava_nodes[node_id].close(eject=True)
 
                     self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
-                    player = await inter.user.voice.channel.connect(cls=wavelink.Player)
 
+                    # Waits until NodeStatus is connected, then connects to the VC
+                    first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
+                    while first_node.status != wavelink.NodeStatus.CONNECTED:
+                        await asyncio.sleep(1)
+                        first_node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
+
+                    player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
 
                 await player.set_volume(self.relative_volume)
                 player.autoplay = wavelink.AutoPlayMode.partial
@@ -294,10 +309,10 @@ class Music(commands.Cog):
                 player.control_user = inter.user.id if LOCK_USER_DEFAULT else None
                 player.inactive_timeout = 150
             except AttributeError:
-                await inter.followup.send(embed=discord.Embed(description="Please join a voice channel first before using this command.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description="Please join a voice channel first before using this command.", color=0xff0000))
                 return
             except discord.ClientException:
-                await inter.followup.send(embed=discord.Embed(description="I was unable to join this voice channel. Please try again.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description="I was unable to join this voice channel. Please try again.", color=0xff0000))
                 return
             
         # Lock the player to this channel...
@@ -330,26 +345,26 @@ class Music(commands.Cog):
             tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source])
         except wavelink.exceptions.NodeException as e:
             if e.__context__ and "422" in str(e.__context__):
-                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is invalid or restricted.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is invalid or restricted.", color=0xff0000))
             elif e.__context__ and "502" in str(e.__context__):
-                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - Y-you're going too fast!!! Slow down and try again later.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - Y-you're going too fast!!! Slow down and try again later.", color=0xff0000))
             else:
-                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - An invalid search query/URL was provided.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - An invalid search query/URL was provided.", color=0xff0000))
             return
         except wavelink.exceptions.LavalinkLoadException as e:
             if "https://" in query or "http://" in query:
-                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is restricted or is unavailable.", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is restricted or is unavailable.", color=0xff0000))
             else:
-                await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - An error occurred while searching for the track: {e}", color=0xff0000))
+                await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - An error occurred while searching for the track: {e}", color=0xff0000))
             return
         
         if not tracks:
-            await inter.followup.send(embed=discord.Embed(description=f"{inter.user.mention} - Could not find any tracks with that query. Please try again.", color=0xff0000))
+            await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - Could not find any tracks with that query. Please try again.", color=0xff0000))
             return
         
         if isinstance(tracks, wavelink.Playlist):    # tracks is a playlist..
             added: int = await player.queue.put_wait(tracks)
-            await inter.followup.send(embed=discord.Embed(description=f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.", color=0xca5cdd))
+            await inter.edit_original_response(embed=discord.Embed(description=f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.", color=0xca5cdd))
         else:
             track: wavelink.Playable = tracks[0]   # search query returns a list of tracks, so we take the first one
             
@@ -392,9 +407,9 @@ class Music(commands.Cog):
             add_queue_embed.set_footer(text=f"Requested by {inter.user}", icon_url=inter.user.display_avatar.url)
 
             if add_toolbar:
-                await inter.followup.send(embed=add_queue_embed, view=add_toolbar)
+                await inter.edit_original_response(embed=add_queue_embed, view=add_toolbar)
             else:
-                await inter.followup.send(embed=add_queue_embed)
+                await inter.edit_original_response(embed=add_queue_embed)
 
         if not player.playing:
             # Play now since we aren't playing anything...
