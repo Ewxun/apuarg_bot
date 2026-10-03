@@ -410,7 +410,10 @@ class Music(commands.Cog):
                 else:
                     track_played = player.position
 
-                current_remaining_time = playing_track.length - track_played
+                if playing_track is None:
+                    current_remaining_time = 0
+                else:
+                    current_remaining_time = playing_track.length - track_played
                 estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
             await player.queue.put_wait(track)
