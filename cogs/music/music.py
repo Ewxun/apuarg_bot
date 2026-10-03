@@ -17,9 +17,10 @@ RELATIVE_VOLUME = 70
 LOCK_USER_DEFAULT = None  # Set to None to allow public control of the player by default, or set to True to lock the player to inter.user by default.
 
 async def is_url_on(url, retries=3):
+    timeout = aiohttp.ClientTimeout(total=5)  # Set a total timeout of 5 seconds for the request
     for _ in range(retries):
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url) as resp:
                     print(f"URL: {url} | Status: {resp.status}")
                     return resp.status in [401, 403, 200]
