@@ -27,6 +27,9 @@ async def is_url_on(url, retries=3):
         except aiohttp.ClientError as e:
             print(f"URL: {url} | Error: {e}")
             await asyncio.sleep(1)  # Wait before retrying
+        except asyncio.TimeoutError:
+            print(f"URL: {url} | Timeout occurred")
+            await asyncio.sleep(1)  # Wait before retrying
     return False
 
 def truncate_str(s: str, length: int=70):
@@ -98,19 +101,19 @@ class Music(commands.Cog):
         
     async def cog_load(self):
         node_list = self.bot.config.get_value('lavalink_nodes')
-        main_node_info = node_list[0] if len(node_list) > 0 else None
 
-        if not main_node_info:
+        if len(node_list) == 0:
             print("[Music] No Lavalink nodes configured. Please check your config.yml file.")
             return
 
-        if await is_url_on(main_node_info[0]):
-            self.main_node = wavelink.Node(uri=main_node_info[0], password=main_node_info[1])
-            self.use_node = self.main_node
+        connected_nodes = []
+        for node_info in node_list:
+            if await is_url_on(node_info[0]):
+                node = wavelink.Node(uri=node_info[0], password=node_info[1])
+                connected_nodes.append(node)
 
-        
         # cache_capacity is EXPERIMENTAL. Turn it off by passing None
-        self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+        self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=connected_nodes, client=self.bot, cache_capacity=None)
         
     async def cog_unload(self):
         for node_id in self.bot.connected_lava_nodes:
