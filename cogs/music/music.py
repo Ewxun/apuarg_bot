@@ -111,6 +111,7 @@ class Music(commands.Cog):
             if await is_url_on(node_info[0]):
                 node = wavelink.Node(uri=node_info[0], password=node_info[1])
                 connected_nodes.append(node)
+        self.bot.connectable_nodes = connected_nodes
 
         # cache_capacity is EXPERIMENTAL. Turn it off by passing None
         self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=connected_nodes, client=self.bot, cache_capacity=None)

@@ -103,22 +103,15 @@ class MusicDebug(app_commands.Group):
     async def reconnect_node(self, inter):
         await inter.response.defer(ephemeral=True)
         lava_nodes = self.bot.connected_lava_nodes
+        connectable_nodes = self.bot.connectable_nodes
         
         for node_id in lava_nodes:
             node: wavelink.Node = lava_nodes[node_id]
             await node.close()
             await asyncio.sleep(2)  # Wait for 2 seconds before reconnecting to ensure the node is closed properly
 
-        node_list = self.bot.config.get_value('lavalink_nodes')
-        main_node_info = node_list[0] if len(node_list) > 0 else None
-    
-        if not main_node_info:
-            print("[Music] No Lavalink nodes configured. Please check your config.yml file.")
-            return
-    
-        self.main_node = wavelink.Node(uri=main_node_info[0], password=main_node_info[1])
-        self.use_node = self.main_node
-        self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+        # cache_capacity is EXPERIMENTAL. Turn it off by passing None
+        self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=connectable_nodes, client=self.bot, cache_capacity=None)
 
         await inter.followup.send(embed=discord.Embed(description="Reconnected to node", color=0x00ff00), ephemeral=True)
 
