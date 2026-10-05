@@ -107,13 +107,49 @@ class MusicDebug(app_commands.Group):
         
         for node_id in lava_nodes:
             node: wavelink.Node = lava_nodes[node_id]
-            await node.close()
+            await node.close(eject=True)  # Close the node and eject all players connected to it
             await asyncio.sleep(2)  # Wait for 2 seconds before reconnecting to ensure the node is closed properly
 
         # cache_capacity is EXPERIMENTAL. Turn it off by passing None
         self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=connectable_nodes, client=self.bot, cache_capacity=None)
 
         await inter.followup.send(embed=discord.Embed(description="Reconnected to node", color=0x00ff00), ephemeral=True)
+
+    @app_commands.command(name="change_node", description="Changes the guild's player node to a different one")
+    async def change_node(self, inter, node_uri:str):
+        await inter.response.defer(ephemeral=True)
+        lava_nodes = self.bot.connected_lava_nodes
+
+        player: wavelink.Player = inter.guild.voice_client
+        if not player:
+            return await inter.followup.send(embed=discord.Embed(description="No player found in this guild", color=0xff0000), ephemeral=True)
+
+        # Find the node with the specified URI
+        new_node = None
+        for node in lava_nodes.values():
+            if node.uri == node_uri:
+                new_node = node
+                break
+
+        if not new_node:
+            return await inter.followup.send(embed=discord.Embed(description="Node not found", color=0xff0000), ephemeral=True)
+
+        try:
+            # Change the player's node to the new node
+            await player.switch_node(new_node)
+        except RuntimeError as e:
+            return await inter.followup.send(embed=discord.Embed(description=f"Error switching node\nDisconnect the player and try again", color=0xff0000), ephemeral=True)
+
+        await inter.followup.send(embed=discord.Embed(description=f"Switched to a different node\nNew node: {new_node.uri}", color=0x00ff00), ephemeral=True)
+
+    @app_commands.autocomplete("node_uri")
+    async def node_uri_autocomplete(self, inter: discord.Interaction, current: str):
+        lava_nodes = self.bot.connected_lava_nodes
+        return [
+            app_commands.Choice(name=node.uri.split(":", 1)[1].replace("/", ""), value=node.uri)
+            for node in lava_nodes.values()
+            if current.lower() in node.uri.lower()
+        ][:25]  # Limit to 25 choices
 
 async def setup(bot):
     return
