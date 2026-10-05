@@ -142,7 +142,7 @@ class MusicDebug(app_commands.Group):
 
         await inter.followup.send(embed=discord.Embed(description=f"Switched to a different node\nNew node: {new_node.uri}", color=0x00ff00), ephemeral=True)
 
-    @app_commands.autocomplete("node_uri")
+    @change_node.autocomplete("node_uri")
     async def node_uri_autocomplete(self, inter: discord.Interaction, current: str):
         lava_nodes = self.bot.connected_lava_nodes
         return [
