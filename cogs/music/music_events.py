@@ -94,6 +94,7 @@ class PlayerToolbarView(discord.ui.View):
 class MusicEvents(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.backup_queue = None
 
     @commands.Cog.listener(name='on_wavelink_node_ready')
     async def node_ready(self, payload: wavelink.NodeReadyEventPayload):
@@ -121,6 +122,7 @@ class MusicEvents(commands.Cog):
         original: wavelink.Playable | None = payload.original
         track: wavelink.Playable = payload.track
         player.current_start = int(time.time())
+        self.bot.backup_queue = player.queue.copy()  # Backup the queue in case of a node crash
 
         embed: discord.Embed = discord.Embed(title="Now Playing", color=random.randint(0, 0xffffff))
         embed.description = f"**{track.title}** by **{track.author}**\n\n{track_load_bar(player, track)}"
@@ -160,8 +162,17 @@ class MusicEvents(commands.Cog):
             return
         
         track: wavelink.Playable = payload.track
+        lavalink_exception = payload.exception
 
-        await player.home.send(embed=discord.Embed(description=f"An error occurred while playing the track: {track.title}\nError: `{payload.exception}`", color=0xff0000))
+        if "AllClientsFailedException" in str(lavalink_exception):
+            await player.home.send(embed=discord.Embed(description=f"An error occurred while playing the track: {track.title}\nError: `All clients failed to play track due to rate limits.`", color=0xff0000))
+        else:
+            await player.home.send(embed=discord.Embed(description=f"An error occurred while playing the track: {track.title}\nError: \n```\n{str(lavalink_exception)[:300]}\n```", color=0xff0000))  # First 300 characters of the exception message
+
+        backup_queue = self.bot.backup_queue
+        if len(backup_queue) > 0:
+            for playable in backup_queue:
+                await player.queue.put_wait(playable)  # Restore the backup queue
 
     @commands.Cog.listener(name="on_wavelink_track_end")
     async def track_end(self, payload: wavelink.TrackEndEventPayload):
