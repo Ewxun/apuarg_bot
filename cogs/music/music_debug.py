@@ -116,13 +116,9 @@ class MusicDebug(app_commands.Group):
         await inter.followup.send(embed=discord.Embed(description="Reconnected to node", color=0x00ff00), ephemeral=True)
 
     @app_commands.command(name="change_node", description="Changes the guild's player node to a different one")
-    async def change_node(self, inter, node_uri:str):
+    async def change_node(self, inter: discord.Interaction, node_uri:str):
         await inter.response.defer(ephemeral=True)
         lava_nodes = self.bot.connected_lava_nodes
-
-        player: wavelink.Player = inter.guild.voice_client
-        if not player:
-            return await inter.followup.send(embed=discord.Embed(description="No player found in this guild", color=0xff0000), ephemeral=True)
 
         # Find the node with the specified URI
         new_node = None
@@ -134,11 +130,20 @@ class MusicDebug(app_commands.Group):
         if not new_node:
             return await inter.followup.send(embed=discord.Embed(description="Node not found", color=0xff0000), ephemeral=True)
 
+        self.bot.use_node = new_node  # Update the bot's use_node to the new node
+        player: wavelink.Player = inter.guild.voice_client
+        if not player:
+            return await inter.followup.send(embed=discord.Embed(description="No player found in this guild, node change will take effect when a new player is created.", color=0xff0000), ephemeral=True)
+
         try:
             # Change the player's node to the new node
             await player.switch_node(new_node)
         except RuntimeError as e:
-            return await inter.followup.send(embed=discord.Embed(description=f"Error switching node\nDisconnect the player and try again", color=0xff0000), ephemeral=True)
+            await player.disconnect()  # Disconnect the player if switching nodes fails
+            print(f"[Music] Error switching node: {e}")
+            await inter.followup.send(embed=discord.Embed(description=f"Error switching node\nDisconnecting the player", color=0xff0000), ephemeral=True)
+            await asyncio.sleep(2)  # Wait for 2 seconds before reconnecting to ensure the player is disconnected properly
+            return await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
 
         await inter.followup.send(embed=discord.Embed(description=f"Switched to a different node\nNew node: {new_node.uri}", color=0x00ff00), ephemeral=True)
 

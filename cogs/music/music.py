@@ -89,8 +89,7 @@ class Music(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
-        self.use_node = None
-        self.backup_node = None
+        self.bot.use_node = None
         self.relative_volume = RELATIVE_VOLUME
         
         self.play_spotify = app_commands.ContextMenu(
@@ -252,7 +251,7 @@ class Music(commands.Cog):
                 for node_id in self.bot.connected_lava_nodes:
                     await self.bot.connected_lava_nodes[node_id].close(eject=True)
                 
-                self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+                self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=self.bot.connectable_nodes, client=self.bot, cache_capacity=None)
                 
                 # Loops until NodeStatus is connected, then connects to the VC
                 first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
@@ -302,7 +301,7 @@ class Music(commands.Cog):
                     for node_id in self.bot.connected_lava_nodes:
                         await self.bot.connected_lava_nodes[node_id].close(eject=True)
 
-                    self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=[self.use_node], client=self.bot, cache_capacity=None)
+                    self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=self.bot.connectable_nodes, client=self.bot, cache_capacity=None)
 
                     # Waits until NodeStatus is connected, then connects to the VC
                     first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
@@ -351,7 +350,7 @@ class Music(commands.Cog):
             query = "dzsearch:" + query
 
         try:
-            tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source])
+            tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source], node=self.bot.use_node)
         except wavelink.exceptions.NodeException as e:
             if e.__context__ and "422" in str(e.__context__):
                 await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is invalid or restricted.", color=0xff0000))
