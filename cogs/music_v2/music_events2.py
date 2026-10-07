@@ -6,7 +6,7 @@ import time
 
 import lava_lyra
 
-from .._music_v2._music import QueuedPlayer
+from .music2 import QueuedPlayer
 
 def colon_time(millis:int) -> str:
     seconds=(millis/1000)%60
