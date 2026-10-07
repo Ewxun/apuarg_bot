@@ -7,10 +7,9 @@ from discord.ext import commands
 from discord import app_commands
 
 import aiohttp
-import wavelink
+import lava_lyra
 
-from .music_debug import MusicDebug
-from .music_effects import MusicEffectsv2
+from ._music_debug import MusicDebug
 
 
 RELATIVE_VOLUME = 70
@@ -81,9 +80,21 @@ class QueueTrackView(discord.ui.View):
     async def toolbar_remove(self, inter, button):
         self.player.queue.remove(self.track)
         await inter.response.send_message(embed=discord.Embed(description=f'{inter.user.mention}: Removed **{self.track.title}** by {self.track.author} from the queue.', color=0xff2167))
-        
 
-class Music(commands.Cog):
+
+class QueuedPlayer(lava_lyra.Player):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.autoplay = False
+        self.queue = lava_lyra.Queue()
+        self.queue.swap = self.swap_queue  # Add the swap_queue method to the queue instance
+
+    def swap_queue(self, pos1:int, pos2:int):
+        if pos1 < 1 or pos2 < 1 or pos1 > len(self.queue) or pos2 > len(self.queue):
+            raise IndexError("Invalid queue positions")
+        self.queue[pos1-1], self.queue[pos2-1] = self.queue[pos2-1], self.queue[pos1-1]
+
+class Music_2(commands.Cog):
     music_group = app_commands.Group(name='music', description='Music commands')
     queue_group = app_commands.Group(name='queue', description='Queue commands', parent=music_group)
     
@@ -91,12 +102,15 @@ class Music(commands.Cog):
         self.bot = bot
         self.bot.use_node = None
         self.relative_volume = RELATIVE_VOLUME
-        
+
+        '''
         self.play_spotify = app_commands.ContextMenu(
             name='Play Spotify Activity Track',
             callback=self.play_spotify_track,
         )
         self.bot.tree.add_command(self.play_spotify)
+        '''
+        
         
     async def cog_load(self):
         node_list = self.bot.config.get_value('lavalink_nodes')
@@ -106,21 +120,31 @@ class Music(commands.Cog):
             return
 
         connected_nodes = []
-        for node_info in node_list:
+        for i, node_info in enumerate(node_list):
             if await is_url_on(node_info[0]):
-                node = wavelink.Node(uri=node_info[0], password=node_info[1])
+                domain = node_info[0].split("://")[1].split("/")[0]
+                port = node_info[0].split("://")[1].split("/")[1] if len(node_info[0].split("://")[1].split("/")) > 1 else "80"
+                port = int(port) if port.isdigit() else 80
+                secure = node_info[0].startswith(("https://", "wss://"))
+
+                node = await lava_lyra.NodePool.create_node(
+                    bot=self.bot, 
+                    host=domain, 
+                    port=port, 
+                    secure=secure, 
+                    password=node_info[1], 
+                    identifier=f"node_{i}",
+                    enabled=True,
+                    fallback=True
+                )
                 connected_nodes.append(node)
         self.bot.connectable_nodes = connected_nodes
-
-        # cache_capacity is EXPERIMENTAL. Turn it off by passing None
-        self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=connected_nodes, client=self.bot, cache_capacity=None)
         
     async def cog_unload(self):
-        for node_id in self.bot.connected_lava_nodes:
-            await self.bot.connected_lava_nodes[node_id].close(eject=True)
+        await lava_lyra.NodePool.disconnect()
 
     async def interaction_check(self, inter: discord.Interaction):
-        player: wavelink.Player = inter.guild.voice_client
+        player: lava_lyra.Player = inter.guild.voice_client
         
         if inter.user.id in self.bot.owner_ids:
             if not player:
@@ -166,7 +190,7 @@ class Music(commands.Cog):
             return False
         return True
     
-    
+    '''
     async def play_spotify_track(self, interaction: discord.Interaction, member: discord.Member):
         #return await inter.response.send_message(embed=discord.Embed(description='Disabled', color=0xff0000))
         if len(member.activities) == 0:
@@ -225,9 +249,8 @@ class Music(commands.Cog):
         if not player.playing:
             # Play now since we aren't playing anything...
             await player.play(player.queue.get(), volume=player.volume)
-            
-
-
+    '''
+    
     @music_group.command(name="connect")
     @app_commands.describe(channel="Provide a channel to connect.")
     async def connect_channel(self, inter, channel: discord.VoiceChannel=None):
@@ -244,25 +267,11 @@ class Music(commands.Cog):
             # Attempt to solve bot instantly disconnecting from VC causing timeout
             # Reloading the cog will fix this, so reconnecting to the Node might fix it?
             try:  
-                player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
-            except wavelink.exceptions.ChannelTimeoutException:
-                await inter.edit_original_response(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
-            
-                for node_id in self.bot.connected_lava_nodes:
-                    await self.bot.connected_lava_nodes[node_id].close(eject=True)
-                
-                self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=self.bot.connectable_nodes, client=self.bot, cache_capacity=None)
-                
-                # Loops until NodeStatus is connected, then connects to the VC
-                first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
-                while first_node.status != wavelink.NodeStatus.CONNECTED:
-                    await asyncio.sleep(1)
-                    first_node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
-                
-                player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
-
+                player = await inter.user.voice.channel.connect(timeout=10, cls=QueuedPlayer)
+            except lava_lyra.exceptions.ChannelTimeoutException:
+                return await inter.edit_original_response(embed=discord.Embed(description="Channel connection timed out.", color=0xff0000))
+              
             await player.set_volume(self.relative_volume)
-            player.autoplay = wavelink.AutoPlayMode.partial
             player.init_user = inter.user.id
             player.control_user = inter.user.id if LOCK_USER_DEFAULT else None
             player.inactive_timeout = 150
@@ -280,39 +289,22 @@ class Music(commands.Cog):
         
     @music_group.command(name="play")
     @app_commands.describe(query="Provide a query to search for a song. Also accepts URLs. Defaults to YouTube Music.", source="Select the source to search from. Defaults to YouTube Music. Ignore this if you are providing a URL.")
-    async def play_cmd(self, inter:discord.Interaction, query: str, source:Literal["YouTube", "YouTubeMusic", "SoundCloud", "Spotify", "Deezer"]='YouTubeMusic') -> None:
+    async def play_cmd(self, inter:discord.Interaction, query: str, source:Literal["YouTube", "YouTubeMusic", "SoundCloud", "Spotify", "Apple Music"]='YouTubeMusic') -> None:
         """Play a song with the given query."""
         if not inter.guild:
             return
         
-        player: wavelink.Player
-        player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         await inter.response.send_message(embed=discord.Embed(description=f"Searching for track...", color=0xca5cdd))
 
         if not player:
             try:
-                # Attempt to solve bot instantly disconnecting from VC causing timeout
-                # Reloading the cog will fix this, so reconnecting to the Node might fix it?
                 try:  
-                    player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
-                except wavelink.exceptions.ChannelTimeoutException:
-                    await inter.edit_original_response(embed=discord.Embed(description="Music server is sleeping... Attempting to wake it up...", color=0x00ffff))
-
-                    for node_id in self.bot.connected_lava_nodes:
-                        await self.bot.connected_lava_nodes[node_id].close(eject=True)
-
-                    self.bot.connected_lava_nodes = await wavelink.Pool.connect(nodes=self.bot.connectable_nodes, client=self.bot, cache_capacity=None)
-
-                    # Waits until NodeStatus is connected, then connects to the VC
-                    first_node: wavelink.Node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
-                    while first_node.status != wavelink.NodeStatus.CONNECTED:
-                        await asyncio.sleep(1)
-                        first_node = list(self.bot.connected_lava_nodes.values())[0] if self.bot.connected_lava_nodes else None
-
-                    player = await inter.user.voice.channel.connect(timeout=10, cls=wavelink.Player)
+                    player = await inter.user.voice.channel.connect(timeout=10, cls=QueuedPlayer)
+                except lava_lyra.exceptions.ChannelTimeoutException:
+                    return await inter.edit_original_response(embed=discord.Embed(description="Channel connection timed out.", color=0xff0000))
 
                 await player.set_volume(self.relative_volume)
-                player.autoplay = wavelink.AutoPlayMode.partial
                 player.init_user = inter.user.id
                 player.control_user = inter.user.id if LOCK_USER_DEFAULT else None
                 player.inactive_timeout = 150
@@ -335,23 +327,16 @@ class Music(commands.Cog):
         # If spotify is enabled via LavaSrc, this will automatically fetch Spotify tracks if you pass a URL...
         # Defaults to YouTubeMusic for non URL based queries...
         source_map = {
-            "YouTube": wavelink.TrackSource.YouTube,
-            "YouTubeMusic": wavelink.TrackSource.YouTubeMusic,
-            "SoundCloud": wavelink.TrackSource.SoundCloud,
-
-            # Handled by LavaSrc if enabled
-            "Spotify": None,  
-            "Deezer": None
+            "YouTube": lava_lyra.SearchType.ytsearch,
+            "YouTubeMusic": lava_lyra.SearchType.ytmsearch,
+            "SoundCloud": lava_lyra.SearchType.scsearch,
+            "Spotify": lava_lyra.SearchType.spsearch,  
+            "Apple Music": lava_lyra.SearchType.amsearch
         }
 
-        if source == "Spotify":
-            query = "spsearch:" + query
-        elif source == "Deezer":
-            query = "dzsearch:" + query
-
         try:
-            tracks: wavelink.Search = await wavelink.Playable.search(query, source=source_map[source], node=self.bot.use_node)
-        except wavelink.exceptions.NodeException as e:
+            tracks = await player.get_tracks(query, search_type=source_map[source], node=self.bot.use_node)
+        except lava_lyra.exceptions.NodeException as e:
             if e.__context__ and "422" in str(e.__context__):
                 await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is invalid or restricted.", color=0xff0000))
             elif e.__context__ and "502" in str(e.__context__):
@@ -359,7 +344,7 @@ class Music(commands.Cog):
             else:
                 await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - An invalid search query/URL was provided.", color=0xff0000))
             return
-        except wavelink.exceptions.LavalinkLoadException as e:
+        except lava_lyra.exceptions.LavalinkLoadException as e:
             if "https://" in query or "http://" in query:
                 await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - The URL you provided is restricted or is unavailable.", color=0xff0000))
             else:
@@ -367,20 +352,19 @@ class Music(commands.Cog):
             return
         
         if not tracks:
-            await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - Could not find any tracks with that query. Please try again.", color=0xff0000))
+            await inter.edit_original_response(embed=discord.Embed(description=f"{inter.user.mention} - Could not find any results with that query. Please try again.", color=0xff0000))
             return
         
-        if isinstance(tracks, wavelink.Playlist):    # tracks is a playlist..
+        if isinstance(tracks, lava_lyra.Playlist):    # tracks is a playlist..
             added: int = await player.queue.put_wait(tracks)
             await inter.edit_original_response(embed=discord.Embed(description=f"Added the playlist **`{tracks.name}`** ({added} songs) to the queue.", color=0xca5cdd))
         else:
-            track: wavelink.Playable = tracks[0]   # search query returns a list of tracks, so we take the first one
-            
+            track: lava_lyra.Track = tracks[0]   # search query returns a list of tracks, so we take the first one
             
             add_queue_embed = discord.Embed(description=f"Added **`{track}`** by **{track.author}** to the queue.", color=0xca5cdd)
 
-            if track.artwork:
-                add_queue_embed.set_thumbnail(url=track.artwork)
+            if track.thumbnail:
+                add_queue_embed.set_thumbnail(url=track.thumbnail)
 
             # Add toolbar buttons to the embed
             add_toolbar = QueueTrackView(player, track)
@@ -420,7 +404,7 @@ class Music(commands.Cog):
                     current_remaining_time = playing_track.length - track_played
                 estimated_time = f"`{colon_time(estimated_time+current_remaining_time)}`"
 
-            await player.queue.put_wait(track)
+            player.queue.put(track)
             add_queue_embed.add_field(name="Duration", value=f"`{colon_time(track.length)}`", inline=True)
             add_queue_embed.add_field(name="Position in queue", value=f"`{player.queue.count}`", inline=True)
             add_queue_embed.add_field(name="Estimated time until play", value=estimated_time, inline=True)
@@ -438,7 +422,7 @@ class Music(commands.Cog):
 
     @music_group.command(name="lyrics", description="Get the lyrics of the current song")
     async def get_lyrics(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         if not player or not player.current:
             return await inter.response.send_message(embed=discord.Embed(description="Bot is not playing anything", color=0xff0000), ephemeral=True)
 
@@ -452,7 +436,7 @@ class Music(commands.Cog):
         session_id = node.session_id
         try:
             lyrics_data = await node.send("GET", path=f"v4/sessions/{session_id}/players/{inter.guild.id}/track/lyrics?skipTrackSource=false")
-        except wavelink.exceptions.LavalinkException as e:
+        except lava_lyra.exceptions.LavalinkException as e:
             return await inter.edit_original_response(embed=discord.Embed(description=f"Error fetching lyrics or no lyrics available.", color=0xff0000))
 
         if lyrics_data["text"] and len(lyrics_data["text"]) > 2:
@@ -482,57 +466,60 @@ class Music(commands.Cog):
 
         current_track_title = player.current.title 
         current_track_author = player.current.author
-        current_track_artwork = player.current.artwork
+        current_track_thumbnail = player.current.thumbnail
 
         # Add the current track info to the first embed
         if embeds:
             embeds[0].title = f"Lyrics for **{current_track_title}** by **{current_track_author}**"
-            if current_track_artwork:
-                embeds[0].set_thumbnail(url=current_track_artwork)
+            if current_track_thumbnail:
+                embeds[0].set_thumbnail(url=current_track_thumbnail)
 
         await inter.edit_original_response(content=None, embeds=embeds)
 
     @music_group.command(name='loop', description='Selects the loop mode.')
     async def loop_mode(self, inter, mode:Literal['Off', 'Song', 'Queue']):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         mode_map = {
-            "Off": wavelink.QueueMode.normal,
-            "Song": wavelink.QueueMode.loop,
-            "Queue": wavelink.QueueMode.loop_all
+            "Song": lava_lyra.LoopMode.TRACK,
+            "Queue": lava_lyra.LoopMode.QUEUE
         }
+
+        if mode == "Off":
+            player.queue.disable_loop()
+            return await inter.response.send_message(embed=discord.Embed(description=f"Disabled looping.", color=0xca5cdd))
         
-        player.queue.mode = mode_map[mode]
+        player.set_loop_mode(mode_map[mode])
         await inter.response.send_message(embed=discord.Embed(description=f"Set loop mode to `{mode}`", color=0xca5cdd))
  
     @music_group.command(name='auto_play', description='Whether to fetch song recommendations after the queue is exhausted')
     async def autoplay_mode(self, inter, autoplay:Literal['Enable', 'Disable']):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         autoplay_map = {
-            'Enable': wavelink.AutoPlayMode.enabled,
-            'Disable': wavelink.AutoPlayMode.partial
+            'Enable': True,
+            'Disable': False
         }
         player.autoplay = autoplay_map[autoplay]
         return await inter.response.send_message(embed=discord.Embed(description=f'{autoplay}d auto play.', color=0xca5cff))
     
     @music_group.command(name='stop', description="Clears the queue and stops the player, but doesn't leave the channel")
     async def stop_player(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         
         player.queue.clear()
-        await player.skip(force=True)
+        await player.stop()
         return await inter.response.send_message(embed=discord.Embed(description='Stopped the player', color=0xca5cff))
 
     @music_group.command(name='skip', description="Skip the current song.")
     async def skip(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
-        await player.skip(force=True)
+        player: QueuedPlayer = inter.guild.voice_client
+        await player.stop()  # Stop if the player is playing, this will trigger the on_track_end event and play the next song in the queue if available
         await inter.response.send_message(embed=discord.Embed(description='Skipped the current song.', color=0xca5cdd))
 
     @music_group.command(name="seek")
     @app_commands.describe(seconds="Input the amount of seconds you want to seek")
     async def forward(self, inter, seconds:int=10):
         "Forwards by a certain amount of time in the current track. The default is 10s."
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         
         if not player.current:
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
@@ -548,7 +535,7 @@ class Music(commands.Cog):
     @app_commands.describe(seconds="Input an amount you want to rewind")
     async def go_back(self, inter, seconds:int=10):
         "Rewinds by a certain amount of time in the current track. The default is 10s."
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         if not player.current:
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
@@ -563,21 +550,21 @@ class Music(commands.Cog):
 
     @music_group.command(name="pause_resume", description="Pause or resume the current song.")
     async def pauseresume(self, inter):
-        player: wavelink.Player = cast(wavelink.Player, inter.guild.voice_client)
+        player: QueuedPlayer = cast(QueuedPlayer, inter.guild.voice_client)
 
-        await player.pause(not player.paused)
-        await inter.response.send_message(embed=discord.Embed(description="Paused the player." if player.paused else "Resumed the player.", color=0xca5cdd))
+        await player.set_pause(not player.is_paused)
+        await inter.response.send_message(embed=discord.Embed(description="Paused the player." if player.is_paused else "Resumed the player.", color=0xca5cdd))
 
     @music_group.command(name="now_playing", description="Shows details of the current track.")
     async def nowplaying(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         if not player.current:
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
         embed = discord.Embed(title="Now Playing", description=f"**{player.current.title}** by **{player.current.author}** \n{track_load_bar(player, player.current)}")
-        if player.current.artwork:
-            embed.set_thumbnail(url=player.current.artwork)
+        if player.current.thumbnail:
+            embed.set_thumbnail(url=player.current.thumbnail)
 
         await inter.response.send_message(embed=embed)
 
@@ -585,7 +572,7 @@ class Music(commands.Cog):
     async def lockcont(self, inter, user:discord.Member=None):
         if not user:
             user = inter.user
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         if not hasattr(player, 'control_user'):
             player.control_user = user.id
             return await inter.response.send_message(embed=discord.Embed(description=f"Player controls now set to {user.mention}", color=0xca5cff))
@@ -605,7 +592,7 @@ class Music(commands.Cog):
     @music_group.command()
     async def volume(self, inter, value:app_commands.Range[int, 0, int(100/RELATIVE_VOLUME)*100]):
         """Change the volume of the player."""
-        player: wavelink.Player = cast(wavelink.Player, inter.guild.voice_client)
+        player: QueuedPlayer = cast(QueuedPlayer, inter.guild.voice_client)
         
         await player.set_volume(int(self.relative_volume*(value/100)))
         await inter.response.send_message(f"Set the volume to **{value}%**")
@@ -613,7 +600,7 @@ class Music(commands.Cog):
     @queue_group.command(name='view', description="View the current queue.")
     async def view_queue(self, inter):
         # TODO: Add pagination for queues with more than 15 songs
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         queue = player.queue
         if len(queue) == 0:
@@ -629,27 +616,10 @@ class Music(commands.Cog):
 
         await inter.response.send_message(embed=embed)
 
-    @queue_group.command(name='history', description="View history of played songs.")
-    async def song_hist(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
-
-        history = player.queue.history
-        if len(history) == 0:
-            return await inter.response.send_message(embed=discord.Embed(description="The history is empty.", color=0xff0000))
-
-        embed = discord.Embed(title="History", description='\n', color=0xca5cdd)
-        for i, song in enumerate(history, 1):
-            if i <= 15:
-                embed.description += f"{i}. **{truncate_str(song.title)}** by {song.author}\n"
-            else:
-                embed.description += f"**_{len(history)-15} more songs..._**"
-                break
-
-        await inter.response.send_message(embed=embed)
 
     @queue_group.command(name='remove', description="Remove a song from the queue.")
     async def q_remove(self, inter, pos:int):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         queue = player.queue
         if len(queue) == 0:
@@ -658,15 +628,14 @@ class Music(commands.Cog):
         if pos > len(queue):
             return await inter.response.send_message(embed=discord.Embed(description="Invalid position.", color=0xff0000))
 
-        removed_song = queue[pos-1]
-        queue.remove(removed_song)
+        removed_song = queue.pop(pos-1)
         rem_embed = discord.Embed(description=f"Removed **{removed_song.title}** by {removed_song.author} from the queue. (Position: {pos})", color=0xff2167)
-        rem_embed.set_thumbnail(url=removed_song.artwork)
+        rem_embed.set_thumbnail(url=removed_song.thumbnail)
         await inter.response.send_message(embed=rem_embed)
 
     @queue_group.command(name='swap', description="Change positions of 2 songs in the queue.")
     async def q_swap(self, inter, pos1:int, pos2:int):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         queue = player.queue
         if len(queue) == 0:
@@ -680,28 +649,27 @@ class Music(commands.Cog):
 
     @queue_group.command(name="clear", description="Clears the queue.")
     async def clear_q(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
         
         player.queue.clear()
         await inter.response.send_message(embed=discord.Embed(description="Cleared the queue", color=0xca5cdd))
         
     @queue_group.command(name="shuffle", description="Shuffle the queue.")
     async def shuffle_q(self, inter):
-        player: wavelink.Player = inter.guild.voice_client
+        player: QueuedPlayer = inter.guild.voice_client
 
         player.queue.shuffle()
         await inter.response.send_message(embed=discord.Embed(description="Shuffled the queue", color=0xca5cdd))
 
     @music_group.command(name='disconnect', description="Disconnects the bot from the voice channel.")
     async def disconnect(self, inter):
-        player: wavelink.Player = cast(wavelink.Player, inter.guild.voice_client)
+        player: QueuedPlayer = cast(QueuedPlayer, inter.guild.voice_client)
         
-        await player.disconnect()
+        await player.destroy()
         await inter.response.send_message(embed=discord.Embed(description="Disconnected the player.", color=0xca5cdd))     
 
 
 async def setup(bot):
-    await bot.add_cog(Music(bot))
+    await bot.add_cog(Music_2(bot))
     mpar = bot.tree.get_command("music")
-    mpar.add_command(MusicDebug(bot))
-    mpar.add_command(MusicEffectsv2(bot))
+    #mpar.add_command(MusicDebug(bot))

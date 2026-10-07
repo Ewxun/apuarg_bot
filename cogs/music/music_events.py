@@ -44,7 +44,7 @@ class PlayerToolbarView(discord.ui.View):
     @discord.ui.button(emoji="⏯️", custom_id="player_toolbar:playpause", style=discord.ButtonStyle.gray, row=0)
     async def toolbar_playpause(self, inter, button):
         await self.player.pause(not self.player.paused)
-        await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Paused the player." if self.player.paused else "Resumed the player.", color=0xca5cdd))
+        await inter.response.send_message(embed=discord.Embed(description=f"{inter.user.mention}: Paused the player." if self.player.paused else f"{inter.user.mention}: Resumed the player.", color=0xca5cdd))
         
     @discord.ui.button(emoji="⏭️", custom_id="player_toolbar:next", style=discord.ButtonStyle.gray, row=0)
     async def toolbar_next(self, inter, button):
