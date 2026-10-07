@@ -95,8 +95,8 @@ class QueuedPlayer(lava_lyra.Player):
         self.queue[pos1-1], self.queue[pos2-1] = self.queue[pos2-1], self.queue[pos1-1]
 
 class Music_2(commands.Cog):
-    music_group = app_commands.Group(name='music', description='Music commands')
-    queue_group = app_commands.Group(name='queue', description='Queue commands', parent=music_group)
+    music_group = app_commands.Group(name='music2', description='Music commands')
+    queue_group = app_commands.Group(name='queue2', description='Queue commands', parent=music_group)
     
     def __init__(self, bot):
         self.bot = bot
