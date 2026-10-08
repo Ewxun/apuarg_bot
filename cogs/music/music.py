@@ -46,7 +46,7 @@ def track_load_bar(player, track, length=20):
     loaded = '='
     unloaded = '-'
 
-    if player.position == 0:
+    if player.position == 0 and hasattr(player, 'current_start'):
         # Falback if player.position is not available
         track_started = player.current_start
         track_played = (int(time.time()) - track_started) * 1000  # To milliseconds
@@ -393,7 +393,7 @@ class Music(commands.Cog):
                 # The track will play after the current track finishes
                 playing_track = player.current
 
-                if player.position == 0:
+                if player.position == 0 and hasattr(player, 'current_start'):
                     # Falback if player.position is not available
                     track_started = player.current_start
                     track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
@@ -407,7 +407,7 @@ class Music(commands.Cog):
                 estimated_time = sum(t.length for t in player.queue)
                 playing_track = player.current
 
-                if player.position == 0:
+                if player.position == 0 and hasattr(player, 'current_start'):
                     # Falback if player.position is not available
                     track_started = player.current_start
                     track_played = (int(time.time()) - track_started) * 1000  # Convert to milliseconds
@@ -538,7 +538,8 @@ class Music(commands.Cog):
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
         # Make it look like now_playing has progressed the seeked seconds
-        player.current_start = player.current_start - seconds
+        if hasattr(player, 'current_start'):
+            player.current_start = player.current_start - seconds
         
         num = seconds*1000
         await player.seek(int(player.position + num))
@@ -554,7 +555,8 @@ class Music(commands.Cog):
             return await inter.response.send_message("Bot is not playing anything", ephemeral=True)
 
         # Make it look like now_playing has deducted the rewinded seconds
-        player.current_start = player.current_start + seconds
+        if hasattr(player, 'current_start'):
+            player.current_start = player.current_start + seconds
         
         num = seconds*1000
         await player.seek(int(player.position - num))
