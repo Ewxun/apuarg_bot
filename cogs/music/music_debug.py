@@ -35,7 +35,7 @@ class MusicDebug(app_commands.Group):
         
     @app_commands.command(name="inspect_node", description="Inspects the Lava node from URI")
     async def insp_node(self, inter, uri:str, pw:str):
-        lv_node = wavelink.Node(uri=uri, password=pw)
+        lv_node = wavelink.Node(uri=uri, password=pw, retries=3)
         await lv_node._connect(client=self.bot)
         embed = discord.Embed(title="Inspect Node", color=0xca5cff)
         if True:

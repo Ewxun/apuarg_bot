@@ -108,7 +108,7 @@ class Music(commands.Cog):
         connected_nodes = []
         for node_info in node_list:
             if await is_url_on(node_info[0]):
-                node = wavelink.Node(uri=node_info[0], password=node_info[1])
+                node = wavelink.Node(uri=node_info[0], password=node_info[1], retries=3)
                 connected_nodes.append(node)
         self.bot.connectable_nodes = connected_nodes
 

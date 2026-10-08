@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 import random
+import asyncio
 import time
 
 import wavelink
@@ -169,10 +170,15 @@ class MusicEvents(commands.Cog):
         else:
             await player.home.send(embed=discord.Embed(description=f"An error occurred while playing the track: {track.title}\nError: \n```\n{str(lavalink_exception)[:300]}\n```", color=0xff0000))  # First 300 characters of the exception message
 
+        if not player.connected:
+            player = await player.channel.connect(cls=wavelink.Player)
+        await asyncio.sleep(2)  # Wait for 2 seconds before reconnecting to ensure the player is connected properly
         backup_queue = self.bot.backup_queue
         if len(backup_queue) > 0:
             for playable in backup_queue:
                 await player.queue.put_wait(playable)  # Restore the backup queue
+
+        await player.play(backup_queue[0])  # Play the first track in the backup queue
 
     @commands.Cog.listener(name="on_wavelink_track_end")
     async def track_end(self, payload: wavelink.TrackEndEventPayload):
