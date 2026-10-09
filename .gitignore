@@ -220,6 +220,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 tests.py
+serv_acc.json
 config.yml
 open_venv.bat
 start_main.bat

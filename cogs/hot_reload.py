@@ -10,12 +10,14 @@ class HotReload(commands.Cog):
     self.bot = bot
 
   @app_commands.command(name='reload', description='Reload all cogs')
-  async def reload(self, interaction):
+  async def reload(self, interaction, exclude: str = None):
     if interaction.user.id not in self.bot.owner_ids:
         return await interaction.response.send_message("Missing Permissions: `Bot Owner`", ephemeral=True)
 
     await interaction.response.defer(thinking=True)
     for filename in os.listdir('cogs'):
+        if exclude and filename.startswith(exclude):
+            continue
         if filename.startswith("_"):
             continue
         if filename.endswith('.py'):

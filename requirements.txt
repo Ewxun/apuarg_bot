@@ -2,3 +2,5 @@ discord.py
 pyyaml
 yt-dlp
 wavelink
+tzdata
+gspread
