@@ -127,7 +127,7 @@ async def about(inter):
 # Check for rate limits and the remaining time until reset
 async def check_rate_limits():
     async with aiohttp.ClientSession() as session:
-        async with session.get("https://discord.com/api/v9") as response:
+        async with session.head("https://discord.com/api/v9") as response:
             if response.status == 429:
                 retry_after = response.headers.get("Retry-After")
                 if retry_after:
