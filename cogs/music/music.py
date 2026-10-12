@@ -268,6 +268,9 @@ class Music(commands.Cog):
             player.inactive_timeout = 150
         except discord.errors.ClientException:
             return await inter.edit_original_response(embed=discord.Embed(description="The bot is already connected to the voice channel.", color=0xff0000))
+        except wavelink.exceptions.InvalidNodeException:
+            await inter.edit_original_response(embed=discord.Embed(description="Music server is not connected or can't be reached. Contact <@686969234428919832> to restart the music server.", color=0xff0000))
+            return
         
         # Lock the player to this channel...
         if not hasattr(player, "home"):
@@ -321,6 +324,9 @@ class Music(commands.Cog):
                 return
             except discord.ClientException:
                 await inter.edit_original_response(embed=discord.Embed(description="I was unable to join this voice channel. Please try again.", color=0xff0000))
+                return
+            except wavelink.exceptions.InvalidNodeException:
+                await inter.edit_original_response(embed=discord.Embed(description="Music server is not connected or can't be reached. Contact <@686969234428919832> to restart the music server.", color=0xff0000))
                 return
             
         # Lock the player to this channel...
