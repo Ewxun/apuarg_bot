@@ -1,5 +1,7 @@
+import asyncio
 import os
 import traceback
+import aiohttp
 
 import discord
 from discord import app_commands
@@ -122,4 +124,15 @@ async def about(inter):
     embed = discord.Embed(title="About", description="Bot made by <@686969234428919832> (ewxun) for the APU Rhythm and Arcade Games community.\n\nAllergy warning: Contains lots of love <3", color=0x00ff00)
     await inter.response.send_message(embed=embed, view=AboutView())
 
+# Check for rate limits and the remaining time until reset
+async def check_rate_limits():
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://discord.com/api/v9") as response:
+            if response.status == 429:
+                retry_after = response.headers.get("Retry-After")
+                if retry_after:
+                    print(f"[Rate Limit] Rate limit exceeded. Retrying after {round(int(retry_after)/60)} minutes.")
+                    await asyncio.sleep(int(retry_after))
+
+asyncio.run(check_rate_limits())
 bot.run(token)
