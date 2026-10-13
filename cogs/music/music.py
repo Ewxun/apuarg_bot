@@ -440,7 +440,7 @@ class Music(commands.Cog):
 
         if not player.current:
             # Play now since we aren't playing anything...
-            await player.play(player.queue.get(), volume=player.volume)
+            await player.play(player.queue.get(), volume=player.volume, populate=True)
 
     @music_group.command(name="lyrics", description="Get the lyrics of the current song")
     async def get_lyrics(self, inter):
