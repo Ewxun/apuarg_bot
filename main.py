@@ -133,6 +133,7 @@ async def check_rate_limits():
                 if retry_after:
                     print(f"[Rate Limit] Rate limit exceeded. Retrying after {round(int(retry_after)/60)} minutes.")
                     await asyncio.sleep(int(retry_after))
+                    await asyncio.sleep(10)  # Add a small delay before retrying
 
 asyncio.run(check_rate_limits())
 bot.run(token)
