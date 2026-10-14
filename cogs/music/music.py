@@ -440,7 +440,7 @@ class Music(commands.Cog):
 
         if not player.current:
             # Play now since we aren't playing anything...
-            await player.play(player.queue.get(), volume=player.volume, populate=True)
+            await player.play(player.queue.get(), volume=player.volume, populate=True, max_populate=3)
 
     @music_group.command(name="lyrics", description="Get the lyrics of the current song")
     async def get_lyrics(self, inter):
@@ -518,6 +518,7 @@ class Music(commands.Cog):
             'Disable': wavelink.AutoPlayMode.partial
         }
         player.autoplay = autoplay_map[autoplay]
+        player.auto_queue.clear()  # Clear the queue to get fresh recommendations
         return await inter.response.send_message(embed=discord.Embed(description=f'{autoplay}d auto play.', color=0xca5cff))
     
     @music_group.command(name='stop', description="Clears the queue and stops the player, but doesn't leave the channel")

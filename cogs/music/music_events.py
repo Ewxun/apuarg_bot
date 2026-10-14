@@ -120,6 +120,12 @@ class MusicEvents(commands.Cog):
             await player.disconnect()
             return
 
+        # We want the recommendations to be based on the current track, not the first track in the queue
+        if player.autoplay == wavelink.AutoPlayMode.enabled:
+            # Remove recommendations generated for earlier tracks
+            # The normal player.queue is left untouched
+            player.auto_queue.clear()
+
         original: wavelink.Playable | None = payload.original
         track: wavelink.Playable = payload.track
         player.current_start = int(time.time())
