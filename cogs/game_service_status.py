@@ -35,10 +35,10 @@ class GameServiceStatus(commands.Cog):
 
         async with aiohttp.ClientSession() as session:
             for game_key, url in game_urls.items():
+                game_name = game_name_map.get(game_key, game_key)
                 try:
                     async with session.get(url, timeout=10, headers=headers) as response:
                         status_code = response.status
-                        game_name = game_name_map.get(game_key, game_key)
                         if status_code == 200:
                             status_color = "🟢"  # Green circle for UP
                             status_message = "Operational"
@@ -82,7 +82,7 @@ class GameServiceStatus(commands.Cog):
         for game_name, (status_color, status_message) in game_statuses.items():
             embed.add_field(name=game_name, value=f"{status_color} - {status_message}", inline=False)
 
-        message_channel = await self.bot.get_channel(update_channel_id)
+        message_channel = self.bot.get_channel(update_channel_id)
         message = await message_channel.fetch_message(message_id)
         await message.edit(embed=embed)
 
