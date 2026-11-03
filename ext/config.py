@@ -12,4 +12,4 @@ def get_value(key, default=None):
             loaded_config = loaded_config[k]
         else:
             return default
-    return loaded_config.get(key, default) if isinstance(loaded_config, dict) else loaded_config
+    return loaded_config
