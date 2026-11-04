@@ -33,7 +33,8 @@ class GameServiceStatus(commands.Cog):
         game_statuses = {}
         all_operational = True
 
-        async with aiohttp.ClientSession() as session:
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
             for game_key, url in game_urls.items():
                 game_name = game_name_map.get(game_key, game_key)
                 try:
