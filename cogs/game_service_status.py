@@ -10,8 +10,10 @@ from ext import config
 
 game_name_map = {
     "allnet": "All.Net",
-    "maimai": "maimai",
-    "chunithm": "CHUNITHM"
+    "maimai_intl": "maimai (Intl)",
+    "maimai_jp": "maimai (JP)",
+    "chunithm_intl": "CHUNITHM (Intl)",
+    "chunithm_jp": "CHUNITHM (JP)",
 }
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
