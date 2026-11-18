@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import aiohttp
 import io
+from contextlib import ExitStack
 
 from ext import config
 
@@ -27,11 +28,21 @@ class SegaNewsUpdate(commands.Cog):
                     if channel:
                         image_bytes_list = await all_net_api.generate_png(session, pop_url)
                         file_list = []
-                        for i, image_bytes in enumerate(image_bytes_list):
-                            file = discord.File(fp=io.BytesIO(image_bytes), filename=f"{game}_news_{i}.png")
-                            file_list.append(file)
-                        
-                        await channel.send(files=file_list)
+
+                        try:
+                            with ExitStack() as stack:
+                                for i in range(len(image_bytes_list)):
+                                    buffer = stack.enter_context(io.BytesIO(image_bytes_list[i]))
+                                    file_list.append(discord.File(fp=buffer, filename=f"{game}_news_{i}.png"))
+                                await channel.send(files=file_list)
+                        finally:
+                            # Release references to Discord.File objects
+                            file_list.clear()
+
+                            # Release references to original image bytes
+                            image_bytes_list.clear()
+
+                            del file_list, image_bytes_list
                     else:
                         print(f"[Sega News] Channel with ID {channel_id} not found.")
         return
