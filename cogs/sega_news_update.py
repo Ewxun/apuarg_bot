@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import aiohttp
+import io
 
 from ext import config
 
@@ -27,7 +28,7 @@ class SegaNewsUpdate(commands.Cog):
                         image_bytes_list = await all_net_api.generate_png(session, pop_url)
                         file_list = []
                         for i, image_bytes in enumerate(image_bytes_list):
-                            file = discord.File(fp=image_bytes, filename=f"{game}_news_{i}.png")
+                            file = discord.File(fp=io.BytesIO(image_bytes), filename=f"{game}_news_{i}.png")
                             file_list.append(file)
                         
                         await channel.send(files=file_list)
