@@ -224,3 +224,6 @@ serv_acc.json
 config.yml
 open_venv.bat
 start_main.bat
+
+ext/all_net_api.py
+store/sega_news.json
